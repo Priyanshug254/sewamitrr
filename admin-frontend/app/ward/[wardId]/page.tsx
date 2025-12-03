@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatDate, getStatusColor, getPriorityColor } from '@/lib/utils'
 import MapWrapper from '@/components/maps/MapWrapper'
+import ContractorManagement from '@/components/ContractorManagement'
 
 export default async function WardDashboard({ params }: { params: Promise<{ wardId: string }> }) {
     const { wardId } = await params
@@ -42,12 +43,12 @@ export default async function WardDashboard({ params }: { params: Promise<{ ward
         .eq('ward_id', wardId)
         .single()
 
-    // Fetch issues forwarded to this ward
+    // Fetch issues forwarded to this ward (CRC-verified only)
     const { data: forwardedIssues } = await supabase
         .from('issues')
         .select('id, category, description, address, priority, status, created_at, assigned_to')
         .eq('ward_id', wardId)
-        .eq('status', 'forwarded_to_ward')
+        .eq('status', 'forwarded_to_ward') // Only CRC-verified issues
         .order('created_at', { ascending: false })
         .limit(20)
 
@@ -255,49 +256,12 @@ export default async function WardDashboard({ params }: { params: Promise<{ ward
                         </div>
                     </div>
 
-                    {/* Contractors */}
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                Available Contractors ({contractors?.length || 0})
-                            </h2>
-                            <Link
-                                href="/workers"
-                                className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
-                            >
-                                View All →
-                            </Link>
-                        </div>
-                        <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
-                            {contractors && contractors.length > 0 ? (
-                                contractors.map((contractor: any) => (
-                                    <div key={contractor.id} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{contractor.full_name}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{contractor.email}</p>
-                                                {contractor.contractor_profiles && (
-                                                    <div className="mt-2">
-                                                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                                            <span>⭐ {contractor.contractor_profiles.rating?.toFixed(1) || 'N/A'}</span>
-                                                            <span>•</span>
-                                                            <span>{contractor.contractor_profiles.active_assignments || 0} active</span>
-                                                            <span>•</span>
-                                                            <span>{contractor.contractor_profiles.completed_assignments || 0} completed</span>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="px-6 py-12 text-center">
-                                    <p className="text-gray-500 dark:text-gray-400">No contractors available</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    {/* Contractor Management */}
+                    <ContractorManagement
+                        wardId={wardId}
+                        cityId={ward?.city_id || ''}
+                        contractors={contractors || []}
+                    />
                 </div>
             </main>
         </div>
