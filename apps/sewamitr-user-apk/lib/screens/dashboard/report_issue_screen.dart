@@ -13,6 +13,7 @@ import '../../services/language_service.dart';
 import '../../services/issue_service.dart';
 import '../../services/location_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/ml_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/animations.dart';
 import '../../utils/image_optimizer.dart';
@@ -146,8 +147,65 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
           print('Location not available, skipping geotag');
         }
         
+        final finalImage = geotaggedImage ?? imageToTag;
+        
+        // ML Validation: Check if image matches selected category
+        final mlService = MLService();
+        final validationResult = await mlService.validateImageCategory(finalImage, _selectedCategory);
+        mlService.dispose();
+        
+        if (!validationResult['isValid']) {
+          // Show warning dialog
+          if (mounted) {
+            final shouldProceed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('Image Mismatch'),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'The image may not match the selected category "${_selectedCategory}".',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 12),
+                    Text('Detected: ${validationResult['detectedLabels'].take(3).join(", ")}'),
+                    SizedBox(height: 12),
+                    Text(
+                      'Do you want to proceed anyway?',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text('Change Image'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.orange),
+                    child: Text('Proceed Anyway'),
+                  ),
+                ],
+              ),
+            );
+            
+            if (shouldProceed != true) {
+              return; // User chose not to proceed
+            }
+          }
+        }
+        
         if (mounted) {
-          setState(() => _imageFiles.add(geotaggedImage ?? imageToTag));
+          setState(() => _imageFiles.add(finalImage));
         }
       } catch (e) {
         print('Error processing image: $e');
