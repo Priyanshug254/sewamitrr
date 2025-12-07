@@ -11,17 +11,7 @@ class CategoryHelper {
         return Colors.amber;
       case 'garbage':
         return Colors.green;
-      case 'street_light':
-        return Colors.purple;
-      case 'drainage':
-        return Colors.brown;
-      case 'park':
-        return Colors.lightGreen;
-      case 'traffic':
-        return Colors.red;
-      case 'noise':
-        return Colors.deepOrange;
-      case 'other':
+      case 'others':
       default:
         return Colors.grey;
     }
@@ -37,19 +27,17 @@ class CategoryHelper {
         return Icons.electric_bolt;
       case 'garbage':
         return Icons.delete_outline;
-      case 'street_light':
-        return Icons.lightbulb_outline;
-      case 'drainage':
-        return Icons.water_damage;
-      case 'park':
-        return Icons.park;
-      case 'traffic':
-        return Icons.traffic;
-      case 'noise':
-        return Icons.volume_up;
-      case 'other':
+      case 'others':
       default:
         return Icons.more_horiz;
     }
   }
+
+  static List<String> get categories => [
+    'road',
+    'water',
+    'electricity',
+    'garbage',
+    'others',
+  ];
 }

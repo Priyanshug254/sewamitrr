@@ -69,27 +69,40 @@ export default async function StateDashboard() {
         .from('issues')
         .select('category, status')
 
+    // Define the 5 valid categories from mobile app
+    const VALID_CATEGORIES = ['road', 'water', 'electricity', 'garbage', 'others'];
+    const CATEGORY_LABELS: Record<string, string> = {
+        road: 'Road',
+        water: 'Water',
+        electricity: 'Electricity',
+        garbage: 'Garbage',
+        others: 'Others'
+    };
 
-    const categoryData = Object.entries(
-        issuesByCategory?.reduce((acc: any, issue) => {
-            // Truncate long category names
-            const cat = issue.category.length > 25 ? issue.category.substring(0, 25) + '...' : issue.category
-            if (!acc[cat]) {
-                acc[cat] = { total: 0, resolved: 0, open: 0 }
-            }
-            acc[cat].total++
-            if (issue.status === 'resolved') acc[cat].resolved++
-            else acc[cat].open++
-            return acc
-        }, {}) || {}
-    ).map(([category, counts]: [string, any]) => ({
-        category,
-        total_issues: counts.total,
-        resolved_issues: counts.resolved,
-        open_issues: counts.open,
+    // Initialize category counts
+    const categoryCounts: Record<string, { total: number, resolved: number, open: number }> = {
+        road: { total: 0, resolved: 0, open: 0 },
+        water: { total: 0, resolved: 0, open: 0 },
+        electricity: { total: 0, resolved: 0, open: 0 },
+        garbage: { total: 0, resolved: 0, open: 0 },
+        others: { total: 0, resolved: 0, open: 0 }
+    };
+
+    // Count issues by category
+    issuesByCategory?.forEach((issue) => {
+        const cat = VALID_CATEGORIES.includes(issue.category) ? issue.category : 'others';
+        categoryCounts[cat].total++;
+        if (issue.status === 'resolved') categoryCounts[cat].resolved++;
+        else categoryCounts[cat].open++;
+    });
+
+    // Convert to array format for chart
+    const categoryData = VALID_CATEGORIES.map(cat => ({
+        category: CATEGORY_LABELS[cat],
+        total_issues: categoryCounts[cat].total,
+        resolved_issues: categoryCounts[cat].resolved,
+        open_issues: categoryCounts[cat].open,
     }))
-        .sort((a, b) => b.total_issues - a.total_issues) // Sort by total descending
-        .slice(0, 10) // Show only top 10 categories
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

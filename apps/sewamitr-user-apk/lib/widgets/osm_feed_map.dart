@@ -76,7 +76,7 @@ class OSMFeedMap extends StatelessWidget {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
       ],

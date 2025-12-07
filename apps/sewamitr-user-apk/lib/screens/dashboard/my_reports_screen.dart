@@ -7,6 +7,7 @@ import '../../models/issue_model.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/animations.dart';
 import '../../utils/category_helper.dart';
+import 'report_detail_screen.dart';
 
 class MyReportsScreen extends StatefulWidget {
   const MyReportsScreen({super.key});
@@ -18,6 +19,7 @@ class MyReportsScreen extends StatefulWidget {
 class _MyReportsScreenState extends State<MyReportsScreen> {
   List<IssueModel> _myIssues = [];
   bool _isLoading = true;
+  String _selectedFilter = 'all'; // all, pending, in_progress, completed
 
   @override
   void initState() {
@@ -30,6 +32,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     if (authService.currentUser != null) {
       try {
         final issues = await IssueService().getUserIssues(authService.currentUser!.id);
+
         if (!mounted) return;
         setState(() {
           _myIssues = issues;
@@ -40,6 +43,13 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  List<IssueModel> _getFilteredIssues() {
+    if (_selectedFilter == 'all') {
+      return _myIssues;
+    }
+    return _myIssues.where((issue) => issue.status == _selectedFilter).toList();
   }
 
   @override
@@ -85,11 +95,32 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
             ),
           ),
 
+          // Status Filter Chips
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip('all', 'All', _myIssues.length),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('pending', 'Pending', _myIssues.where((i) => i.status == 'pending').length),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('in_progress', 'In Progress', _myIssues.where((i) => i.status == 'in_progress').length),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('completed', 'Completed', _myIssues.where((i) => i.status == 'completed').length),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           if (_isLoading)
             const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (_myIssues.isEmpty)
+          else if (_getFilteredIssues().isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Column(
@@ -98,7 +129,9 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                     Icon(Icons.assignment_outlined, size: 64, color: Colors.grey[300]),
                     const SizedBox(height: 16),
                     Text(
-                      languageService.translate('no_issues_reported'),
+                      _selectedFilter == 'all' 
+                          ? languageService.translate('no_issues_reported')
+                          : 'No ${_selectedFilter.replaceAll('_', ' ')} reports',
                       style: TextStyle(color: Colors.grey[500]),
                     ),
                   ],
@@ -109,7 +142,8 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final issue = _myIssues[index];
+                  final filteredIssues = _getFilteredIssues();
+                  final issue = filteredIssues[index];
                   return FadeInSlide(
                     delay: index * 0.1,
                     child: Padding(
@@ -118,7 +152,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                     ),
                   );
                 },
-                childCount: _myIssues.length,
+                childCount: _getFilteredIssues().length,
               ),
             ),
             
@@ -128,163 +162,207 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     );
   }
 
-  Widget _buildReportCard(IssueModel issue) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+  Widget _buildFilterChip(String filter, String label, int count) {
+    final isSelected = _selectedFilter == filter;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = filter;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppTheme.primary : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          if (issue.mediaUrls.isNotEmpty)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              child: Image.network(
-                issue.mediaUrls.first,
-                height: 150,
-                width: double.infinity,
-                fit: BoxFit.cover,
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: AppTheme.primary.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[700],
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 14,
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _getCategoryColor(issue.category).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _getCategoryIcon(issue.category),
-                            size: 14,
-                            color: _getCategoryColor(issue.category),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            issue.category.toUpperCase(),
-                            style: TextStyle(
-                              color: _getCategoryColor(issue.category),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(issue.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        issue.status.toUpperCase().replaceAll('_', ' '),
-                        style: TextStyle(
-                          color: _getStatusColor(issue.status),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                      onPressed: () => _confirmDelete(issue),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withOpacity(0.3) : Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey[700],
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  issue.description,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _formatDate(issue.createdAt),
-                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                ),
-                const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: issue.progress / 100,
-                  backgroundColor: Colors.grey[100],
-                  valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor(issue.status)),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${issue.progress}% Completed',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _confirmDelete(IssueModel issue) async {
-    final languageService = context.read<LanguageService>();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Issue'),
-        content: const Text('Are you sure you want to delete this issue? This will permanently remove all photos, audio, and data.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(languageService.translate('cancel')),
+  Widget _buildReportCard(IssueModel issue) {
+    return GestureDetector(
+      onTap: () async {
+        // Navigate to detail screen
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ReportDetailScreen(issue: issue),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+        );
+        
+        // Refresh list if issue was deleted or updated
+        if (result == true) {
+          _loadMyIssues();
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            if (issue.mediaUrls.isNotEmpty)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: Image.network(
+                  issue.mediaUrls.first,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: CategoryHelper.getCategoryColor(issue.category).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              CategoryHelper.getCategoryIcon(issue.category),
+                              size: 14,
+                              color: CategoryHelper.getCategoryColor(issue.category),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              issue.category.toUpperCase(),
+                              style: TextStyle(
+                                color: CategoryHelper.getCategoryColor(issue.category),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(issue.status).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          issue.status.toUpperCase().replaceAll('_', ' '),
+                          style: TextStyle(
+                            color: _getStatusColor(issue.status),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    issue.description,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  LinearProgressIndicator(
+                    value: issue.progress / 100,
+                    backgroundColor: Colors.grey[100],
+                    valueColor: AlwaysStoppedAnimation<Color>(_getStatusColor(issue.status)),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${issue.progress}% Completed',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Row(
+                        children: [
+                          Icon(Icons.chevron_right, size: 20, color: AppTheme.primary),
+                          SizedBox(width: 4),
+                          Text(
+                            'View Details',
+                            style: TextStyle(
+                              color: AppTheme.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
-
-    if (confirmed == true && issue.id != null) {
-      try {
-        await IssueService().deleteIssue(issue.id!);
-        if (!mounted) return;
-        setState(() => _myIssues.removeWhere((i) => i.id == issue.id));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Issue deleted successfully'), backgroundColor: Colors.green),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting issue: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
   }
 
   Color _getStatusColor(String status) {
@@ -297,14 +375,4 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
         return Colors.grey;
     }
   }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    return '${diff.inHours}h ago';
-  }
-
-  IconData _getCategoryIcon(String category) => CategoryHelper.getCategoryIcon(category);
-  Color _getCategoryColor(String category) => CategoryHelper.getCategoryColor(category);
 }

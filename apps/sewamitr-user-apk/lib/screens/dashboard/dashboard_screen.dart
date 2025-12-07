@@ -41,6 +41,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _setupNotifications();
   }
 
+
+
   Future<void> _loadCommunityStats() async {
     final stats = await IssueService().getCommunityStats();
     if (mounted) {
@@ -53,6 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final notificationService = context.read<NotificationService>();
     if (authService.currentUser != null) {
       notificationService.loadNotifications(authService.currentUser!.id);
+      notificationService.subscribeToNotifications(authService.currentUser!.id);
     }
   }
 
@@ -60,6 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final authService = context.read<AuthService>();
     if (authService.currentUser != null) {
       try {
+        setState(() => _isLoading = true);
         final issues = await IssueService().getUserIssues(authService.currentUser!.id);
         if (!mounted) return;
         setState(() {
@@ -78,6 +82,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final languageService = Provider.of<LanguageService>(context);
     final authService = Provider.of<AuthService>(context);
     final notificationService = Provider.of<NotificationService>(context);
+    
+
 
     final List<Widget> screens = [
       _buildHomeTab(languageService, authService),
@@ -283,7 +289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.volunteer_activism, color: Colors.white, size: 16),
+                                const Icon(Icons.volunteer_activism, color: Colors.white, size: 16),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Making your community better',
@@ -460,24 +466,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
                 
                 // Recent Activity List
-                if (_isLoading)
-                  const Center(child: CircularProgressIndicator())
-                else if (_userIssues.isEmpty)
-                  _buildEmptyState(languageService)
-                else
-                  ListView.builder(
-                    padding: EdgeInsets.zero,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _userIssues.take(3).length,
-                    itemBuilder: (context, index) {
-                      final issue = _userIssues[index];
-                      return FadeInSlide(
-                        delay: 0.6 + (index * 0.1),
-                        child: _buildActivityItem(issue),
-                      );
-                    },
-                  ),
+                FutureBuilder<List<IssueModel>>(
+                  future: IssueService().getUserIssues(authService.currentUser?.id ?? ''),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return _buildEmptyState(languageService);
+                    }
+                    final issues = snapshot.data!.take(3).toList();
+                    return ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: issues.length,
+                      itemBuilder: (context, index) {
+                        final issue = issues[index];
+                        return FadeInSlide(
+                          delay: 0.6 + (index * 0.1),
+                          child: _buildActivityItem(issue),
+                        );
+                      },
+                    );
+                  },
+                ),
                   
                 const SizedBox(height: 80), // Bottom padding for FAB
               ],
@@ -673,6 +686,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Colors.green;
       case 'in_progress':
         return Colors.orange;
+      case 'pending':
+        return Colors.grey;
       default:
         return Colors.grey;
     }

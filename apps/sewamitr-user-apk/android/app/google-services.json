@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "599718942690",
+    "project_id": "sewamitr-7adde",
+    "storage_bucket": "sewamitr-7adde.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:599718942690:android:e706f4ade0c381dc9e8bbb",
+        "android_client_info": {
+          "package_name": "com.example.sewamitr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1DxiTyB8g6fzNS5IM9owsNnaIdyaMjfE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -224,7 +224,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.location_on),
               ),
-              keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -235,7 +235,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.location_on),
               ),
-              keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(

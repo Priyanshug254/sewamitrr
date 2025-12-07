@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class NotificationService extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
   List<AppNotification> _notifications = [];
+  RealtimeChannel? _notificationChannel;
   
   List<AppNotification> get notifications => _notifications;
   int get unreadCount => _notifications.where((n) => !n.isRead).length;
@@ -24,6 +25,71 @@ class NotificationService extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error loading notifications: $e');
     }
+  }
+
+  Future<void> subscribeToNotifications(String userId) async {
+    debugPrint('🔔 Subscribing to notifications for user: $userId');
+    
+    // Unsubscribe from previous channel if exists
+    if (_notificationChannel != null) {
+      await _notificationChannel!.unsubscribe();
+      debugPrint('🔔 Unsubscribed from previous channel');
+    }
+    
+    // Subscribe to real-time notifications
+    _notificationChannel = _supabase
+        .channel('notifications_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            debugPrint('🔔 NEW notification received: ${payload.newRecord}');
+            final newNotification = AppNotification.fromMap(payload.newRecord);
+            _notifications.insert(0, newNotification);
+            debugPrint('🔔 Notification added. Total: ${_notifications.length}, Unread: $unreadCount');
+            notifyListeners();
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            debugPrint('🔔 UPDATED notification received: ${payload.newRecord}');
+            final updatedNotification = AppNotification.fromMap(payload.newRecord);
+            final index = _notifications.indexWhere((n) => n.id == updatedNotification.id);
+            if (index != -1) {
+              _notifications[index] = updatedNotification;
+              debugPrint('🔔 Notification updated. Unread: $unreadCount');
+              notifyListeners();
+            }
+          },
+        )
+        .subscribe();
+    
+    debugPrint('🔔 Subscription established successfully');
+  }
+
+  void unsubscribeFromNotifications() {
+    _notificationChannel?.unsubscribe();
+    _notificationChannel = null;
+  }
+
+  @override
+  void dispose() {
+    unsubscribeFromNotifications();
+    super.dispose();
   }
 
   Future<void> createProgressNotification(String userId, String issueId, int progress) async {
@@ -79,6 +145,16 @@ class NotificationService extends ChangeNotifier {
         .eq('user_id', userId);
     
     _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
+    notifyListeners();
+  }
+
+  Future<void> clearAll(String userId) async {
+    await _supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId);
+    
+    _notifications = [];
     notifyListeners();
   }
 }

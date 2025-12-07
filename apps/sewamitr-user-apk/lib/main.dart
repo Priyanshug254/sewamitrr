@@ -3,21 +3,34 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/language_service.dart';
 import 'services/notification_service.dart';
+import 'services/fcm_service.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Load environment variables
   await dotenv.load(fileName: ".env");
   
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize Supabase
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+  
+  // Initialize FCM Service (don't await to avoid blocking startup)
+  FCMService().initialize();
   
   runApp(const SewaMitrApp());
 }
@@ -32,7 +45,7 @@ class ErrorBoundary extends StatelessWidget {
       return Material(
         child: Container(
           color: Colors.white,
-          child: Center(
+          child: const Center(
             child: Text('An error occurred', style: TextStyle(color: Colors.red)),
           ),
         ),

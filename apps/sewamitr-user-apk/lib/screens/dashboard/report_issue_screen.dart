@@ -16,6 +16,7 @@ import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/animations.dart';
 import '../../utils/image_optimizer.dart';
+import '../../utils/image_geotag_util.dart';
 import '../../models/issue_model.dart';
 
 class ReportIssueScreen extends StatefulWidget {
@@ -29,7 +30,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   String _selectedCategory = 'road';
-  List<XFile> _imageFiles = [];
+  final List<XFile> _imageFiles = [];
   String? _audioPath;
   bool _isLoading = false;
   bool _locationLoading = false;
@@ -48,12 +49,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
     {'id': 'water', 'name': 'Water', 'icon': Icons.water_drop, 'color': Colors.blue},
     {'id': 'electricity', 'name': 'Electricity', 'icon': Icons.electric_bolt, 'color': Colors.amber},
     {'id': 'garbage', 'name': 'Garbage', 'icon': Icons.delete_outline, 'color': Colors.green},
-    {'id': 'street_light', 'name': 'Street Light', 'icon': Icons.lightbulb_outline, 'color': Colors.purple},
-    {'id': 'drainage', 'name': 'Drainage', 'icon': Icons.water_damage, 'color': Colors.brown},
-    {'id': 'park', 'name': 'Park', 'icon': Icons.park, 'color': Colors.lightGreen},
-    {'id': 'traffic', 'name': 'Traffic', 'icon': Icons.traffic, 'color': Colors.red},
-    {'id': 'noise', 'name': 'Noise', 'icon': Icons.volume_up, 'color': Colors.deepOrange},
-    {'id': 'other', 'name': 'Other', 'icon': Icons.more_horiz, 'color': Colors.grey},
+    {'id': 'others', 'name': 'Others', 'icon': Icons.more_horiz, 'color': Colors.grey},
   ];
 
   @override
@@ -80,7 +76,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
   Future<void> _getCurrentLocation() async {
     setState(() => _locationLoading = true);
     try {
-      final position = await LocationService().getCurrentLocation();
+      final position = await LocationService().getCurrentLocation(context: context);
       final address = await LocationService().getAddressFromCoordinates(
         position.latitude,
         position.longitude,
@@ -108,22 +104,56 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
       final pickedFiles = await picker.pickMultiImage();
       if (pickedFiles.isNotEmpty && mounted) {
         for (var file in pickedFiles) {
-          if (kIsWeb) {
-            setState(() => _imageFiles.add(file));
-          } else {
-            final compressed = await ImageOptimizer.compressImage(file, quality: 70, maxWidth: 1024, maxHeight: 1024);
-            if (mounted) setState(() => _imageFiles.add(compressed ?? file));
-          }
+          await _processAndAddImage(file);
         }
       }
     } else {
       final pickedFile = await picker.pickImage(source: source);
       if (pickedFile != null && mounted) {
-        if (kIsWeb) {
-          setState(() => _imageFiles.add(pickedFile));
+        await _processAndAddImage(pickedFile);
+      }
+    }
+  }
+
+  Future<void> _processAndAddImage(XFile file) async {
+    if (kIsWeb) {
+      setState(() => _imageFiles.add(file));
+    } else {
+      try {
+        print('Processing image: ${file.path}');
+        print('Current location: $_latitude, $_longitude');
+        
+        // Compress image
+        final compressed = await ImageOptimizer.compressImage(file, quality: 70, maxWidth: 1024, maxHeight: 1024);
+        final imageToTag = compressed ?? file;
+        
+        // Add geotag if location is available
+        XFile? geotaggedImage;
+        if (_latitude != null && _longitude != null) {
+          print('Adding geotag to image...');
+          geotaggedImage = await ImageGeotagUtil.addGeotagToImage(
+            imageFile: imageToTag,
+            latitude: _latitude!,
+            longitude: _longitude!,
+          );
+          
+          if (geotaggedImage != null) {
+            print('Geotag added successfully: ${geotaggedImage.path}');
+          } else {
+            print('Failed to add geotag, using original image');
+          }
         } else {
-          final compressed = await ImageOptimizer.compressImage(pickedFile, quality: 70, maxWidth: 1024, maxHeight: 1024);
-          setState(() => _imageFiles.add(compressed ?? pickedFile));
+          print('Location not available, skipping geotag');
+        }
+        
+        if (mounted) {
+          setState(() => _imageFiles.add(geotaggedImage ?? imageToTag));
+        }
+      } catch (e) {
+        print('Error processing image: $e');
+        // Add original image if processing fails
+        if (mounted) {
+          setState(() => _imageFiles.add(file));
         }
       }
     }
@@ -198,10 +228,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
                 delay: 0.1,
                 child: Row(
                   children: [
-                    // Image Picker
+                    // Photo Gallery - First photo with View All button
                     Expanded(
+                      flex: 2,
                       child: GestureDetector(
-                        onTap: () => _showImageSourceDialog(),
+                        onTap: _imageFiles.isNotEmpty ? _showPhotoGalleryBottomSheet : _showImageSourceDialog,
                         child: Container(
                           height: 120,
                           decoration: BoxDecoration(
@@ -209,22 +240,36 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Colors.grey[300]!),
                           ),
-                          child: _imageFiles.isNotEmpty && _imageFiles.first != null
+                          child: _imageFiles.isNotEmpty
                               ? Stack(
                                   children: [
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(20),
                                       child: kIsWeb
-                                          ? Image.network(_imageFiles.first.path, fit: BoxFit.cover, width: double.infinity)
-                                          : Image.file(File(_imageFiles.first.path), fit: BoxFit.cover, width: double.infinity),
+                                          ? Image.network(_imageFiles.first.path, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
+                                          : Image.file(File(_imageFiles.first.path), fit: BoxFit.cover, width: double.infinity, height: double.infinity),
                                     ),
                                     if (_imageFiles.length > 1)
                                       Positioned(
-                                        bottom: 8, right: 8,
+                                        bottom: 8,
+                                        right: 8,
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(12)),
-                                          child: Text('+${_imageFiles.length - 1}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black87,
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.photo_library, color: Colors.white, size: 16),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'View All (${_imageFiles.length})',
+                                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                   ],
@@ -264,7 +309,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
                                   builder: (context, child) {
                                     return Transform.scale(
                                       scale: _pulseAnimation!.value,
-                                      child: Icon(
+                                      child: const Icon(
                                         Icons.mic,
                                         size: 32,
                                         color: Colors.red,
@@ -637,6 +682,136 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
     );
   }
 
+  void _showPhotoGalleryBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setModalState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+            ),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Photos (${_imageFiles.length})',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                // Photo Grid
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: _imageFiles.length + 1, // +1 for add button
+                    itemBuilder: (context, index) {
+                      if (index == _imageFiles.length) {
+                        // Add more button
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showImageSourceDialog();
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey[300]!, width: 2, style: BorderStyle.solid),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate, size: 32, color: Colors.grey[600]),
+                                const SizedBox(height: 4),
+                                Text('Add More', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      final imageFile = _imageFiles[index];
+                      return Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: kIsWeb
+                                  ? Image.network(imageFile.path, fit: BoxFit.cover, width: double.infinity, height: double.infinity)
+                                  : Image.file(File(imageFile.path), fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _imageFiles.removeAt(index);
+                                });
+                                setModalState(() {}); // Update modal state
+                                if (_imageFiles.isEmpty) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, color: Colors.white, size: 16),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
@@ -673,7 +848,11 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
   }
 
   Future<void> _submitIssue() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Validate form - description is optional if audio is recorded
+    if (_audioPath == null && !_formKey.currentState!.validate()) {
+      return;
+    }
+    
     if (_latitude == null || _longitude == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Location is required')),
@@ -705,7 +884,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
       List<String> mediaUrls = [];
       for (var imageFile in _imageFiles) {
         final url = await issueService.uploadFile(imageFile, 'issues', issueId);
-        if (url != null) mediaUrls.add(url);
+        mediaUrls.add(url);
       }
 
       String? audioUrl;
@@ -714,7 +893,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> with SingleTicker
         audioUrl = await issueService.uploadFile(audioFile, 'audio', issueId);
       }
 
-      await issueService.updateIssueMedia(issueId, mediaUrls, audioUrl);
+      await issueService.updateIssueMedia(issueId, mediaUrls, audioUrl, null);
 
       if (!mounted) return;
       Navigator.pop(context);

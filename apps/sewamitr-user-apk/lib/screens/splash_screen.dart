@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'auth_wrapper.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -10,10 +9,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late VideoPlayerController _videoController;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  bool _videoInitialized = false;
 
   @override
   void initState() {
@@ -27,25 +24,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
     );
 
-    _initializeVideo();
+    _fadeController.forward();
     _navigateToHome();
   }
 
-  Future<void> _initializeVideo() async {
-    _videoController = VideoPlayerController.asset('assets/images/splash.mp4');
-    try {
-      await _videoController.initialize();
-      await _videoController.play();
-      if (mounted) {
-        setState(() => _videoInitialized = true);
-        _fadeController.forward();
-      }
-    } catch (e) {
-      if (mounted) {
-        _fadeController.forward();
-      }
-    }
-  }
+
 
   Future<void> _navigateToHome() async {
     await Future.delayed(const Duration(seconds: 3));
@@ -61,7 +44,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _videoController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
@@ -81,22 +63,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             ],
           ),
         ),
-        child: _videoInitialized
-            ? SizedBox.expand(
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: _videoController.value.size.width,
-                    height: _videoController.value.size.height,
-                    child: VideoPlayer(_videoController),
-                  ),
-                ),
-              )
-            : const Center(
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                ),
-              ),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Image.asset(
+            'assets/images/splash.gif',
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+        ),
       ),
     );
   }

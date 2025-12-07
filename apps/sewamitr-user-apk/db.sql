@@ -136,6 +136,9 @@ CREATE POLICY "System can create notifications" ON notifications
 CREATE POLICY "Users can update own notifications" ON notifications
   FOR UPDATE USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can delete own notifications" ON notifications
+  FOR DELETE USING (auth.uid() = user_id);
+
 -- ============================================
 -- 5. HELPER FUNCTIONS
 -- ============================================
@@ -268,6 +271,129 @@ BEGIN
     (SELECT COUNT(*)::INTEGER FROM issues WHERE status = 'completed');
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================
+-- 9. COMMENTS TABLE
+-- ============================================
+
+CREATE TABLE comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  issue_id UUID REFERENCES issues(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  comment_text TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "Anyone can view comments" ON comments
+  FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can insert comments" ON comments
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own comments" ON comments
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Indexes for performance
+CREATE INDEX idx_comments_issue_id ON comments(issue_id);
+CREATE INDEX idx_comments_user_id ON comments(user_id);
+
+-- Add completed_at column to issues table for reopen functionality
+-- This enables 48-hour reopen window after completion
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
+
+-- Update existing completed issues to set completed_at = updated_at
+UPDATE issues 
+SET completed_at = updated_at 
+WHERE status = 'completed' AND completed_at IS NULL;
+
+
+-- ============================================
+-- 10. ISSUE UPDATES TABLE (Worker Progress Tracking)
+-- ============================================
+-- Stores complete history of worker updates for milestone tracking
+
+CREATE TABLE IF NOT EXISTS issue_updates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  issue_id UUID REFERENCES issues(id) ON DELETE CASCADE NOT NULL,
+  worker_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  description TEXT NOT NULL,
+  image_urls TEXT[] DEFAULT '{}',
+  progress INTEGER NOT NULL CHECK (progress >= 0 AND progress <= 100),
+  status TEXT NOT NULL CHECK (status IN ('pending', 'in_progress', 'completed')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE issue_updates ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for issue_updates
+CREATE POLICY "Users can view updates for their issues" ON issue_updates
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM issues 
+      WHERE issues.id = issue_updates.issue_id 
+      AND issues.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Workers can insert their own updates" ON issue_updates
+  FOR INSERT WITH CHECK (worker_id = auth.uid());
+
+CREATE POLICY "Workers can view updates for assigned issues" ON issue_updates
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM issues 
+      WHERE issues.id = issue_updates.issue_id 
+      AND issues.assigned_to::uuid = auth.uid()
+    )
+  );
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_issue_updates_issue_id ON issue_updates(issue_id);
+CREATE INDEX IF NOT EXISTS idx_issue_updates_created_at ON issue_updates(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_issue_updates_worker_id ON issue_updates(worker_id);
+
+-- Helper function to get issue updates
+CREATE OR REPLACE FUNCTION get_issue_updates(p_issue_id UUID)
+RETURNS SETOF issue_updates AS $$
+BEGIN
+  RETURN QUERY
+  SELECT * FROM issue_updates
+  WHERE issue_id = p_issue_id
+  ORDER BY created_at ASC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Helper function to get update count
+CREATE OR REPLACE FUNCTION get_issue_update_count(p_issue_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  update_count INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO update_count
+  FROM issue_updates
+  WHERE issue_id = p_issue_id;
+  RETURN update_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
+-- 11. ISSUE REOPEN FUNCTIONALITY
+-- ============================================
+-- Issues can be reopened within 48 hours of:
+-- 1. Initial creation (created_at)
+-- 2. Completion (completed_at)
+-- When reopened:
+-- - Status resets to 'pending'
+-- - Progress resets to 0
+-- - completed_at is cleared
+-- - assigned_to is cleared
+-- - New photos and description can be added
 
 -- ============================================
 -- SETUP COMPLETE

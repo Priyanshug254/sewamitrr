@@ -10,9 +10,12 @@ A Flutter mobile app for reporting and tracking civic issues with real-time upda
 - 🗺️ OpenStreetMap Integration (No API Key Required)
 - 📍 Location-based Issue Tracking
 - 👥 Community Feed & One-Time Voting
-- 🔔 In-App Notifications for Progress Updates
+- � Comment System with Real-time Updates
+- 📤 Share Issues via Social Media
+- �🔔 In-App Notifications for Progress Updates
 - 🎯 Real-time Issue Status Updates
 - 🏆 Gamification System
+- 🔍 Multi-Filter Selection & Advanced Sorting
 
 ## 🛠️ Tech Stack
 
@@ -27,7 +30,7 @@ A Flutter mobile app for reporting and tracking civic issues with real-time upda
 - Flutter SDK 3.0+
 - Dart SDK
 - Android Studio / VS Code
-- Supabase Account (Free tier)
+- Supabase Account 
 
 ## ⚡ Quick Setup
 
@@ -100,7 +103,7 @@ lib/
 
 ## 🎯 Key Features
 
-### 1. Issue Reporting
+### 1. Issue Reporting & Tracking
 - 📷 Multiple photo upload (camera/gallery)
 - 🎤 Compressed audio descriptions (64kbps AAC)
 - 📍 Map-based location pinning
@@ -108,13 +111,25 @@ lib/
 - 🗜️ Auto image compression (70% quality, 1024x1024)
 - 📸 Issue-based storage organization
 - 🗑️ Delete reported issues
+- 🔄 Reopen completed issues with additional photos/description
+- 🔄 Reopen completed issues (48-hour window)
+- **📊 4-Stage milestone tracker** (Reported → Assigned → In Progress → Completed)
+- **📄 Dedicated Report Details page** with full issue information
+- **💬 Worker Updates section** showing all progress updates with photos and messages
+- **📈 Visual progress tracking** with 4-stage milestones
 
 ### 2. Community Feed
-- 🗺️ View nearby issues (1km radius)
-- 🔥 Filter: trending, priority, new
+- 🗺️ View nearby issues (5km radius)
+- 🔥 Filter: Nearby, Trending, Highest Priority, New, All Issues
+- 🎯 Multi-category filter selection
+- 📊 Vote-based trending sort (highest upvotes first)
 - 👍 One-time upvoting system
-- 🗺️ Real-time map view
+- � Comment on issues with real-time updates
+- 📊 Comment counts displayed on cards
+- 📤 Share issues via WhatsApp, SMS, Email, etc.
+- �🗺️ Real-time map view with heatmap
 - 👥 Accurate citizen count (only active reporters)
+- 📱 20 most recent issues by default
 
 ### 3. Notifications
 - 🔔 Progress milestone alerts (25%, 50%, 75%, 100%)
@@ -194,6 +209,7 @@ image_picker: ^1.0.7         # Photos
 record: ^5.2.1               # Audio
 video_player: ^2.8.2         # Splash video
 flutter_dotenv: ^5.1.0       # Environment
+share_plus: ^7.2.2           # Share functionality
 ```
 
 ## 🔒 Security Features
@@ -238,12 +254,15 @@ flutter_dotenv: ^5.1.0       # Environment
 - `issues` - Reported issues (UUID)
 - `votes` - One-time voting
 - `notifications` - Progress alerts
+- `comments` - Issue comments with RLS
+- **`issue_updates`** - Worker progress history (NEW)
 
 ### Storage
 ```
 sewamitr/
 ├── issues/{issue_id}/      # Photos
 ├── audio/{issue_id}/       # Audio
+├── updates/{issue_id}/     # Worker progress photos (NEW)
 └── profiles/{user_id}/     # Profile pics
 ```
 
@@ -261,6 +280,13 @@ sewamitr/
 3. Check notification bell
 4. Tap to mark as read
 
+### Test Issue Reopening
+1. Complete an issue (set progress to 100%)
+2. Go to My Reports
+3. Tap "Reopen" button (available for 48 hours)
+4. Add description and optional photos
+5. Submit - issue resets to pending status
+
 ## 📝 Documentation Files
 
 - `README.md` - This file (setup & features)
@@ -273,10 +299,6 @@ sewamitr/
 2. Create feature branch
 3. Commit changes
 4. Push and open PR
-
-## 📄 License
-
-MIT License
 
 ## 🙏 Acknowledgments
 

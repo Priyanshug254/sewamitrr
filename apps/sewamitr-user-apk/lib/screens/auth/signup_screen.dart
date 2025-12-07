@@ -116,7 +116,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             const SizedBox(height: 16),
 
                             DropdownButtonFormField<String>(
-                              value: _selectedLanguage,
+                              initialValue: _selectedLanguage,
                               decoration: InputDecoration(
                                 labelText: languageService.translate('preferred_language'),
                                 prefixIcon: const Icon(Icons.language),

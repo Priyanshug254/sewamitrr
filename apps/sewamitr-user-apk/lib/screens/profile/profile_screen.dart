@@ -39,11 +39,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           .select()
           .eq('user_id', authService.currentUser!.id);
       
-      if (mounted && response != null) {
+      if (mounted) {
         final issues = response as List;
         setState(() {
           _totalReports = issues.length;
-          _resolvedIssues = issues.where((i) => i['status'] == 'completed').length;
+          _resolvedIssues = issues.where((i) => i['status'] == 'completed' || i['status'] == 'resolved').length;
         });
       }
     }
@@ -184,7 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         )
                                       : Center(
                                           child: Text(
-                                            user?.name?.substring(0, 1).toUpperCase() ?? 'U',
+                                            user?.name.substring(0, 1).toUpperCase() ?? 'U',
                                             style: const TextStyle(
                                               fontSize: 40,
                                               fontWeight: FontWeight.bold,

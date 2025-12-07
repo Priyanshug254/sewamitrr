@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/language_service.dart';
+import '../../services/issue_service.dart';
+import 'report_detail_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -35,17 +37,45 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(languageService.translate('notifications')),
+        backgroundColor: const Color(0xFF00b29f),
+        foregroundColor: Colors.white,
         actions: [
           if (notifications.isNotEmpty)
-            TextButton(
+            IconButton(
+              icon: const Icon(Icons.done_all),
+              tooltip: 'Mark All Read',
               onPressed: () async {
                 final authService = context.read<AuthService>();
                 await notificationService.markAllAsRead(authService.currentUser!.id);
               },
-              child: Text(
-                languageService.translate('mark_all_read'),
-                style: const TextStyle(color: Colors.white),
-              ),
+            ),
+          if (notifications.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Clear All',
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Clear All Notifications'),
+                    content: const Text('Are you sure you want to delete all notifications? This cannot be undone.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Clear All', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true) {
+                  final authService = context.read<AuthService>();
+                  await notificationService.clearAll(authService.currentUser!.id);
+                }
+              },
             ),
         ],
       ),
@@ -125,8 +155,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ],
         ),
         onTap: () async {
+          // Mark as read
           if (!notification.isRead) {
             await service.markAsRead(notification.id);
+          }
+          
+          // Navigate to issue detail if issue_id exists
+          if (notification.issueId != null && mounted) {
+            try {
+              // Fetch the issue details
+              final issueService = IssueService();
+              final issue = await issueService.getIssueById(notification.issueId!);
+              
+              if (issue != null && mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ReportDetailScreen(issue: issue),
+                  ),
+                );
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Issue not found')),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error loading issue: $e')),
+                );
+              }
+            }
           }
         },
       ),

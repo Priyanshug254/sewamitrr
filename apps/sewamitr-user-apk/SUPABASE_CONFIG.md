@@ -31,6 +31,7 @@ This creates:
 - `issues` table with RLS
 - `votes` table with RLS
 - `notifications` table with RLS
+- `comments` table with RLS
 - Helper functions (upvote, nearby issues, community stats)
 - Auto-triggers (points system, user stats auto-update)
 - Storage policies
@@ -198,6 +199,8 @@ sewamitr/
 - [ ] Test photo upload
 - [ ] Test audio recording
 - [ ] Test upvoting
+- [ ] Test comments (add/view/delete)
+- [ ] Test share functionality
 - [ ] Test notifications
 - [ ] Verify RLS works
 - [ ] Email templates (optional)

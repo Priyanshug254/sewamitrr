@@ -1,0 +1,68 @@
+// Additional language translations for SewaMitr
+// Import this data into language_service.dart
+
+const Map<String, Map<String, String>> additionalLanguages = {
+  'mr': {
+    'login': 'लॉगिन', 'signup': 'साइन अप', 'create_account': 'खाते तयार करा',
+    'email': 'ईमेल', 'password': 'पासवर्ड', 'name': 'नाव', 'language': 'भाषा',
+    'english': 'इंग्रजी', 'hindi': 'हिंदी', 'bengali': 'बंगाली', 'telugu': 'तेलुगू',
+    'marathi': 'मराठी', 'tamil': 'तमिळ', 'gujarati': 'गुजराती', 'urdu': 'उर्दू',
+    'kannada': 'कन्नड', 'odia': 'ओडिया', 'malayalam': 'मल्याळम',
+    'dashboard': 'डॅशबोर्ड', 'profile': 'प्रोफाइल', 'home': 'होम',
+    'report': 'अहवाल', 'feed': 'फीड', 'logout': 'लॉगआउट',
+  },
+  'ta': {
+    'login': 'உள்நுழைய', 'signup': 'பதிவு செய்க', 'create_account': 'கணக்கை உருவாக்கு',
+    'email': 'மின்னஞ்சல்', 'password': 'கடவுச்சொல்', 'name': 'பெயர்', 'language': 'மொழி',
+    'english': 'ஆங்கிலம்', 'hindi': 'இந்தி', 'bengali': 'வங்காளம்', 'telugu': 'தெலுங்கு',
+    'marathi': 'மராத்தி', 'tamil': 'தமிழ்', 'gujarati': 'குஜராத்தி', 'urdu': 'உருது',
+    'kannada': 'கன்னடம்', 'odia': 'ஒடியா', 'malayalam': 'மலையாளம்',
+    'dashboard': 'டாஷ்போர்டு', 'profile': 'சுயவிவரம்', 'home': 'முகப்பு',
+    'report': 'அறிக்கை', 'feed': 'ஊட்டம்', 'logout': 'வெளியேறு',
+  },
+  'gu': {
+    'login': 'લૉગિન', 'signup': 'સાઇન અપ', 'create_account': 'ખાતું બનાવો',
+    'email': 'ઈમેલ', 'password': 'પાસવર્ડ', 'name': 'નામ', 'language': 'ભાષા',
+    'english': 'અંગ્રેજી', 'hindi': 'હિન્દી', 'bengali': 'બંગાળી', 'telugu': 'તેલુગુ',
+    'marathi': 'મરાઠી', 'tamil': 'તમિલ', 'gujarati': 'ગુજરાતી', 'urdu': 'ઉર્દૂ',
+    'kannada': 'કન્નડ', 'odia': 'ઓડિયા', 'malayalam': 'મલયાલમ',
+    'dashboard': 'ડેશબોર્ડ', 'profile': 'પ્રોફાઇલ', 'home': 'હોમ',
+    'report': 'રિપોર્ટ', 'feed': 'ફીડ', 'logout': 'લૉગઆઉટ',
+  },
+  'ur': {
+    'login': 'لاگ ان', 'signup': 'سائن اپ', 'create_account': 'اکاؤنٹ بنائیں',
+    'email': 'ای میل', 'password': 'پاس ورڈ', 'name': 'نام', 'language': 'زبان',
+    'english': 'انگریزی', 'hindi': 'ہندی', 'bengali': 'بنگالی', 'telugu': 'تیلگو',
+    'marathi': 'مراٹھی', 'tamil': 'تمل', 'gujarati': 'گجراتی', 'urdu': 'اردو',
+    'kannada': 'کنڑ', 'odia': 'اوڑیا', 'malayalam': 'ملیالم',
+    'dashboard': 'ڈیش بورڈ', 'profile': 'پروفائل', 'home': 'ہوم',
+    'report': 'رپورٹ', 'feed': 'فیڈ', 'logout': 'لاگ آؤٹ',
+  },
+  'kn': {
+    'login': 'ಲಾಗಿನ್', 'signup': 'ಸೈನ್ ಅಪ್', 'create_account': 'ಖಾತೆ ರಚಿಸಿ',
+    'email': 'ಇಮೇಲ್', 'password': 'ಪಾಸ್‌ವರ್ಡ್', 'name': 'ಹೆಸರು', 'language': 'ಭಾಷೆ',
+    'english': 'ಇಂಗ್ಲಿಷ್', 'hindi': 'ಹಿಂದಿ', 'bengali': 'ಬೆಂಗಾಲಿ', 'telugu': 'ತೆಲುಗು',
+    'marathi': 'ಮರಾಠಿ', 'tamil': 'ತಮಿಳು', 'gujarati': 'ಗುಜರಾತಿ', 'urdu': 'ಉರ್ದು',
+    'kannada': 'ಕನ್ನಡ', 'odia': 'ಒಡಿಯಾ', 'malayalam': 'ಮಲಯಾಳಂ',
+    'dashboard': 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್', 'profile': 'ಪ್ರೊಫೈಲ್', 'home': 'ಹೋಮ್',
+    'report': 'ವರದಿ', 'feed': 'ಫೀಡ್', 'logout': 'ಲಾಗ್‌ಔಟ್',
+  },
+  'or': {
+    'login': 'ଲଗଇନ୍', 'signup': 'ସାଇନ୍ ଅପ୍', 'create_account': 'ଖାତା ସୃଷ୍ଟି କରନ୍ତୁ',
+    'email': 'ଇମେଲ୍', 'password': 'ପାସୱାର୍ଡ଼', 'name': 'ନାମ', 'language': 'ଭାଷା',
+    'english': 'ଇଂରାଜୀ', 'hindi': 'ହିନ୍ଦୀ', 'bengali': 'ବଙ୍ଗାଳୀ', 'telugu': 'ତେଲୁଗୁ',
+    'marathi': 'ମରାଠୀ', 'tamil': 'ତାମିଲ୍', 'gujarati': 'ଗୁଜରାଟୀ', 'urdu': 'ଉର୍ଦ୍ଦୁ',
+    'kannada': 'କନ୍ନଡ଼', 'odia': 'ଓଡ଼ିଆ', 'malayalam': 'ମାଲାୟାଲମ୍',
+    'dashboard': 'ଡ୍ୟାସବୋର୍ଡ଼', 'profile': 'ପ୍ରୋଫାଇଲ୍', 'home': 'ହୋମ୍',
+    'report': 'ରିପୋର୍ଟ', 'feed': 'ଫିଡ୍', 'logout': 'ଲଗଆଉଟ୍',
+  },
+  'ml': {
+    'login': 'ലോഗിൻ', 'signup': 'സൈൻ അപ്പ്', 'create_account': 'അക്കൗണ്ട് സൃഷ്ടിക്കുക',
+    'email': 'ഇമെയിൽ', 'password': 'പാസ്‌വേഡ്', 'name': 'പേര്', 'language': 'ഭാഷ',
+    'english': 'ഇംഗ്ലീഷ്', 'hindi': 'ഹിന്ദി', 'bengali': 'ബംഗാളി', 'telugu': 'തെലുങ്ക്',
+    'marathi': 'മറാത്തി', 'tamil': 'തമിഴ്', 'gujarati': 'ഗുജറാത്തി', 'urdu': 'ഉർദു',
+    'kannada': 'കന്നഡ', 'odia': 'ഒഡിയ', 'malayalam': 'മലയാളം',
+    'dashboard': 'ഡാഷ്‌ബോർഡ്', 'profile': 'പ്രൊഫൈൽ', 'home': 'ഹോം',
+    'report': 'റിപ്പോർട്ട്', 'feed': 'ഫീഡ്', 'logout': 'ലോഗൗട്ട്',
+  },
+};
