@@ -1,0 +1,20 @@
+    const categoryData = Object.entries(
+        issuesByCategory?.reduce((acc: any, issue) => {
+            // Truncate long category names
+            const cat = issue.category.length > 25 ? issue.category.substring(0, 25) + '...' : issue.category
+            if (!acc[cat]) {
+                acc[cat] = { total: 0, resolved: 0, open: 0 }
+            }
+            acc[cat].total++
+            if (issue.status === 'resolved') acc[cat].resolved++
+            else acc[cat].open++
+            return acc
+        }, {}) || {}
+    ).map(([category, counts]: [string, any]) => ({
+        category,
+        total_issues: counts.total,
+        resolved_issues: counts.resolved,
+        open_issues: counts.open,
+    }))
+    .sort((a, b) => b.total_issues - a.total_issues) // Sort by total descending
+    .slice(0, 10) // Show only top 10 categories
