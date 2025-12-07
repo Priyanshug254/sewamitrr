@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { formatDate } from '@/lib/utils'
 import MapWrapper from '@/components/maps/MapWrapper'
+import StatusChart from '@/components/charts/StatusChart'
+import CategoryChart from '@/components/charts/CategoryChart'
 
 export default async function StateDashboard() {
     const supabase = await createClient()
@@ -48,6 +50,46 @@ export default async function StateDashboard() {
         .select('id, latitude, longitude, category, status, priority')
         .not('latitude', 'is', null)
         .not('longitude', 'is', null)
+
+    // Prepare chart data
+    const { data: issuesByStatus } = await supabase
+        .from('issues')
+        .select('status')
+
+    const statusCounts = {
+        submitted: issuesByStatus?.filter(i => i.status === 'submitted').length || 0,
+        crc_verified: issuesByStatus?.filter(i => i.status === 'crc_verified').length || 0,
+        forwarded_to_ward: issuesByStatus?.filter(i => i.status === 'forwarded_to_ward').length || 0,
+        in_progress: issuesByStatus?.filter(i => i.status === 'in_progress').length || 0,
+        resolved: issuesByStatus?.filter(i => i.status === 'resolved').length || 0,
+        rejected: issuesByStatus?.filter(i => i.status === 'rejected').length || 0,
+    }
+
+    const { data: issuesByCategory } = await supabase
+        .from('issues')
+        .select('category, status')
+
+
+    const categoryData = Object.entries(
+        issuesByCategory?.reduce((acc: any, issue) => {
+            // Truncate long category names
+            const cat = issue.category.length > 25 ? issue.category.substring(0, 25) + '...' : issue.category
+            if (!acc[cat]) {
+                acc[cat] = { total: 0, resolved: 0, open: 0 }
+            }
+            acc[cat].total++
+            if (issue.status === 'resolved') acc[cat].resolved++
+            else acc[cat].open++
+            return acc
+        }, {}) || {}
+    ).map(([category, counts]: [string, any]) => ({
+        category,
+        total_issues: counts.total,
+        resolved_issues: counts.resolved,
+        open_issues: counts.open,
+    }))
+        .sort((a, b) => b.total_issues - a.total_issues) // Sort by total descending
+        .slice(0, 10) // Show only top 10 categories
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -134,6 +176,12 @@ export default async function StateDashboard() {
                         issues={mapIssues || []}
                         className="h-[500px] w-full rounded-lg z-0"
                     />
+                </div>
+
+                {/* Analytics Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <StatusChart data={statusCounts} />
+                    <CategoryChart data={categoryData} />
                 </div>
 
                 {/* City Analytics Table */}
