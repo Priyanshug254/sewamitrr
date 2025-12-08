@@ -50,10 +50,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _setupNotifications() {
+  void _setupNotifications() async {
     final authService = context.read<AuthService>();
     final notificationService = context.read<NotificationService>();
     if (authService.currentUser != null) {
+      // Initialize local notifications first
+      await notificationService.initialize();
+      
+      // Then load and subscribe
       notificationService.loadNotifications(authService.currentUser!.id);
       notificationService.subscribeToNotifications(authService.currentUser!.id);
     }

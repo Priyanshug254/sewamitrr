@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -139,17 +140,24 @@ class FCMService {
       onDidReceiveNotificationResponse: _handleLocalNotificationClick,
     );
 
-    // Create notification channel for Android
+    // Create notification channel for Android with sound and vibration
     const androidChannel = AndroidNotificationChannel(
       'high_importance_channel',
       'High Importance Notifications',
       description: 'This channel is used for important notifications.',
-      importance: Importance.high,
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+      enableLights: true,
+      ledColor: const Color(0xFF2196F3),
+      showBadge: true,
     );
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
+    
+    debugPrint('🔥 Notification channel created with sound and vibration');
   }
 
   Future<void> _saveFCMToken(String token) async {
@@ -190,22 +198,50 @@ class FCMService {
   Future<void> _showLocalNotification(RemoteMessage message) async {
     debugPrint('🔥 Showing local notification...');
     
-    const androidDetails = AndroidNotificationDetails(
+    final androidDetails = AndroidNotificationDetails(
       'high_importance_channel',
       'High Importance Notifications',
       channelDescription: 'This channel is used for important notifications.',
-      importance: Importance.high,
+      importance: Importance.max,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      playSound: true,
+      enableVibration: true,
+      enableLights: true,
+      color: const Color(0xFF2196F3),
+      ledColor: const Color(0xFF2196F3),
+      ledOnMs: 1000,
+      ledOffMs: 500,
+      showWhen: true,
+      when: DateTime.now().millisecondsSinceEpoch,
+      usesChronometer: false,
+      channelShowBadge: true,
+      autoCancel: true,
+      ongoing: false,
+      styleInformation: BigTextStyleInformation(
+        message.notification?.body ?? '',
+        contentTitle: message.notification?.title,
+        summaryText: 'SewaMitr',
+      ),
+      actions: <AndroidNotificationAction>[
+        const AndroidNotificationAction(
+          'view',
+          'View',
+          showsUserInterface: true,
+        ),
+      ],
     );
 
     const iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      sound: 'default',
+      badgeNumber: 1,
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );

@@ -4,6 +4,9 @@ import 'package:image_picker/image_picker.dart';
 class MLService {
   final ImageLabeler _imageLabeler = ImageLabeler(options: ImageLabelerOptions());
 
+  // Minimum confidence threshold for ML labels
+  static const double _minConfidenceThreshold = 0.5;
+
   // Category mapping: maps app categories to expected ML labels
   static const Map<String, List<String>> _categoryKeywords = {
     'road': ['road', 'street', 'asphalt', 'highway', 'pavement', 'path', 'lane', 'sidewalk', 'pothole', 'crack'],
@@ -19,8 +22,17 @@ class MLService {
       final inputImage = InputImage.fromFilePath(imageFile.path);
       final labels = await _imageLabeler.processImage(inputImage);
 
-      // Get detected label texts
-      final detectedLabels = labels.map((label) => label.label.toLowerCase()).toList();
+      print('🔍 ML Validation - Category: $selectedCategory');
+      print('🔍 ML Detected ${labels.length} labels:');
+      for (var label in labels) {
+        print('   - ${label.label} (confidence: ${(label.confidence * 100).toStringAsFixed(1)}%)');
+      }
+
+      // Get detected label texts with confidence above threshold
+      final detectedLabels = labels
+          .where((label) => label.confidence >= _minConfidenceThreshold)
+          .map((label) => label.label.toLowerCase())
+          .toList();
       
       // If category is 'others', always return valid
       if (selectedCategory.toLowerCase() == 'others') {
@@ -48,19 +60,30 @@ class MLService {
       // Check if any detected label matches expected keywords
       double maxConfidence = 0.0;
       bool isValid = false;
+      String? matchedLabel;
 
       for (final label in labels) {
+        if (label.confidence < _minConfidenceThreshold) continue;
+        
         final labelText = label.label.toLowerCase();
         final confidence = label.confidence;
 
         for (final keyword in expectedKeywords) {
-          if (labelText.contains(keyword) || keyword.contains(labelText)) {
+          // Stricter matching: keyword must be in label
+          if (labelText == keyword || labelText.contains(keyword)) {
             isValid = true;
             if (confidence > maxConfidence) {
               maxConfidence = confidence;
+              matchedLabel = label.label;
             }
           }
         }
+      }
+
+      if (isValid) {
+        print('✅ MATCH: "$matchedLabel" (${(maxConfidence * 100).toStringAsFixed(1)}%)');
+      } else {
+        print('❌ NO MATCH. Detected: ${detectedLabels.take(5).join(", ")}');
       }
 
       return {
@@ -73,13 +96,13 @@ class MLService {
       };
 
     } catch (e) {
-      print('ML validation error: $e');
-      // On error, return valid to not block user
+      print('❌ ML validation error: $e');
+      // On error, return INVALID to be safe
       return {
-        'isValid': true,
+        'isValid': false,
         'confidence': 0.0,
         'detectedLabels': [],
-        'message': 'Validation failed, proceeding anyway'
+        'message': 'ML validation failed: $e'
       };
     }
   }

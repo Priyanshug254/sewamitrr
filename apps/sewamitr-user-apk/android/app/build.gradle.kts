@@ -35,8 +35,8 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false  // Disabled to avoid R8 errors
+            isShrinkResources = false  // Disabled to avoid R8 errors
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -48,4 +48,9 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    
+    // Exclude old firebase-iid to prevent duplicate class errors
+    configurations.all {
+        exclude(group = "com.google.firebase", module = "firebase-iid")
+    }
 }

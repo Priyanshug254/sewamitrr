@@ -99,7 +99,18 @@ class _FeedScreenState extends State<FeedScreen> {
     } catch (e) {}
   }
 
+  List<IssueModel>? _cachedFilteredIssues;
+  String? _lastFilterKey;
+
   List<IssueModel> get _filteredIssues {
+    // Create a key based on current filter state
+    final filterKey = '$_selectedSort|${_selectedCategories.join(',')}|${_currentLat}_${_currentLng}|${_issues.length}';
+    
+    // Return cached result if filter hasn't changed
+    if (_lastFilterKey == filterKey && _cachedFilteredIssues != null) {
+      return _cachedFilteredIssues!;
+    }
+    
     List<IssueModel> filtered = _issues;
     
     if (_currentLat != null && _currentLng != null) {
@@ -134,6 +145,10 @@ class _FeedScreenState extends State<FeedScreen> {
         filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
     
+    // Cache the result
+    _cachedFilteredIssues = filtered;
+    _lastFilterKey = filterKey;
+    
     return filtered;
   }
 
@@ -157,11 +172,67 @@ class _FeedScreenState extends State<FeedScreen> {
 
   Future<void> _handleUpvote(IssueModel issue) async {
     if (_votedIssues.contains(issue.id)) return;
+    
     final authService = context.read<AuthService>();
+    
+    // Optimistic UI update - update immediately for instant feedback
+    setState(() {
+      _votedIssues.add(issue.id!);
+      // Find and update the issue in the list
+      final index = _issues.indexWhere((i) => i.id == issue.id);
+      if (index != -1) {
+        _issues[index] = IssueModel(
+          id: _issues[index].id,
+          userId: _issues[index].userId,
+          category: _issues[index].category,
+          description: _issues[index].description,
+          address: _issues[index].address,
+          latitude: _issues[index].latitude,
+          longitude: _issues[index].longitude,
+          mediaUrls: _issues[index].mediaUrls,
+          audioUrl: _issues[index].audioUrl,
+          audioDescription: _issues[index].audioDescription,
+          status: _issues[index].status,
+          upvotes: _issues[index].upvotes + 1, // Increment locally
+          assignedTo: _issues[index].assignedTo,
+          createdAt: _issues[index].createdAt,
+          updatedAt: _issues[index].updatedAt,
+          progress: _issues[index].progress,
+          completedAt: _issues[index].completedAt,
+        );
+      }
+    });
+    
+    // Make API call in background
     final success = await IssueService().upvoteIssue(issue.id.toString(), authService.currentUser!.id);
-    if (success) {
-      setState(() => _votedIssues.add(issue.id!));
-      _loadIssues();
+    
+    // If failed, revert the optimistic update
+    if (!success) {
+      setState(() {
+        _votedIssues.remove(issue.id);
+        final index = _issues.indexWhere((i) => i.id == issue.id);
+        if (index != -1) {
+          _issues[index] = IssueModel(
+            id: _issues[index].id,
+            userId: _issues[index].userId,
+            category: _issues[index].category,
+            description: _issues[index].description,
+            address: _issues[index].address,
+            latitude: _issues[index].latitude,
+            longitude: _issues[index].longitude,
+            mediaUrls: _issues[index].mediaUrls,
+            audioUrl: _issues[index].audioUrl,
+            audioDescription: _issues[index].audioDescription,
+            status: _issues[index].status,
+            upvotes: _issues[index].upvotes - 1, // Revert
+            assignedTo: _issues[index].assignedTo,
+            createdAt: _issues[index].createdAt,
+            updatedAt: _issues[index].updatedAt,
+            progress: _issues[index].progress,
+            completedAt: _issues[index].completedAt,
+          );
+        }
+      });
     }
   }
 
